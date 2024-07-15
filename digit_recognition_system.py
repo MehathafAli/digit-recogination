@@ -13,6 +13,24 @@ import tensorflow
 from tensorflow import keras
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense,Flatten
+from sklearn.datasets import fetch_openml
+
+!pip install gradio
+
+import gradio as gr
+
+import tensorflow as tf
+from matplotlib import pyplot as plt
+import numpy as np
+
+objects =  tf.keras.datasets.mnist
+(training_images, training_labels), (test_images, test_labels) = objects.load_data()
+
+for i in range(9):
+	# define subplot
+	plt.subplot(330 + 1 + i)
+	# plot raw pixel data
+	plt.imshow(training_images[i])
 
 (X_train,y_train),(X_test,y_test) = keras.datasets.mnist.load_data()
 
@@ -42,8 +60,28 @@ plt.imshow(X_train[2])
 
 X_train = X_train/255
 X_test = X_test/255
+training_images  = training_images / 255.0
+test_images = test_images / 255.0
 
 X_train[0]
+
+from tensorflow.keras.layers import Flatten, Dense
+model = tf.keras.models.Sequential([Flatten(input_shape=(28,28)),
+                                    Dense(256, activation='relu'),
+                                    Dense(256, activation='relu'),
+                                    Dense(128, activation='relu'),
+                                    Dense(10, activation=tf.nn.softmax)])
+
+test=test_images[0].reshape(-1,28,28)
+pred=model.predict(test)
+print(pred)
+
+def predict_image(img):
+  img_3d=img.reshape(-1,28,28)
+  im_resize=img_3d/255.0
+  prediction=model.predict(im_resize)
+  pred=np.argmax(prediction)
+  return pred
 
 #keras sequential model
 model = Sequential()
@@ -57,6 +95,15 @@ model.summary() #784x128 weight + 128biases ... dense
 #128 x 10 output is weights + 10 output layer , so the trainable parms hai 1L se jyda
 
 model.compile(loss='sparse_categorical_crossentropy',optimizer='Adam', metrics=['accuracy'])  #sparse mei labels ko 1hottencode krna nhi padta 0,1,2,3,4 ... 9 whereas in khali categorical onehottencode krna padta hai
+model.compile(optimizer = 'adam',
+              loss = 'sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+model.fit(training_images, training_labels, epochs=10)
+
+test=test_images[0].reshape(-1,28,28)
+pred=model.predict(test)
+print(pred)
 
 #TRAINING
 history=model.fit(X_train,y_train,epochs=25,validation_split=0.2)
@@ -76,6 +123,17 @@ plt.plot(history.history['val_loss'])
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
 
-plt.imshow(X_test[1])
+plt.imshow(X_test[0])
 
-model.predict(X_test[1].reshape(1,28,28)).argmax(axis=1)
+model.predict(X_test[0].reshape(1,28,28)).argmax(axis=1)
+
+def predict_image(img):
+  img_3d=img.reshape(-1,28,28)
+  im_resize=img_3d/255.0
+  prediction=model.predict(im_resize)
+  pred=np.argmax(prediction)
+  return pred
+
+iface = gr.Interface(predict_image, inputs="sketchpad", outputs="label")
+
+iface.launch(debug='True')
