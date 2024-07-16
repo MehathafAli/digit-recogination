@@ -33,10 +33,11 @@
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
-
 from flask import Flask, request, jsonify, render_template
 import tensorflow as tf
 import numpy as np
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
@@ -51,23 +52,29 @@ def index():
 # Define a route to handle prediction
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Get the image file from the POST request
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+    
     file = request.files['file']
 
-    # Read the image file
-    img = tf.keras.preprocessing.image.load_img(file, target_size=(28, 28), color_mode='grayscale')
+    try:
+        # Read the image file
+        img = Image.open(io.BytesIO(file.read())).convert('L').resize((28, 28))  # Convert to grayscale and resize
 
-    # Preprocess the image
-    img_array = tf.keras.preprocessing.image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0  # Normalize the image
+        # Preprocess the image
+        img_array = np.array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0  # Normalize the image
 
-    # Make prediction
-    prediction = model.predict(img_array)
-    predicted_digit = np.argmax(prediction)
+        # Make prediction
+        prediction = model.predict(img_array)
+        predicted_digit = np.argmax(prediction)
 
-    # Return the prediction as JSON
-    return jsonify({'prediction': int(predicted_digit)})
+        # Return the prediction as JSON
+        return jsonify({'prediction': int(predicted_digit)})
+    except Exception as e:
+        app.logger.error('Error during prediction: %s', e)
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
