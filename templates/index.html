@@ -9,8 +9,10 @@
   <body>
     <div class="container">
       <h1>Digit Recognition</h1>
-      <input type="file" id="imageUpload" accept="image/*" />
-      <button onclick="predict()">Predict</button>
+      <div class="file-upload">
+        <label for="imageUpload" class="file-label">Choose Image</label>
+        <input type="file" id="imageUpload" accept="image/*" onchange="handleFileSelect(event)">
+        <button onclick="predict()">Predict</button>
       <div id="result"></div>
     </div>
 
